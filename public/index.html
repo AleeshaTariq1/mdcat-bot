@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MDCAT Bot — StudyPath PK</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-chtml.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green: #16a34a;
+      --green-dark: #15803d;
+      --green-light: #dcfce7;
+      --sidebar-bg: #111827;
+      --sidebar-hover: #1f2937;
+      --sidebar-text: #d1d5db;
+      --bg: #f9fafb;
+      --border: #e5e7eb;
+      --text: #111827;
+      --text-light: #6b7280;
+      --bot-bubble: #f3f4f6;
+      --user-bubble: #16a34a;
+    }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); height: 100vh; overflow: hidden; }
+
+    /* ── AUTH ── */
+    #auth-screen {
+      display: flex; align-items: center; justify-content: center;
+      height: 100vh; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    }
+    .auth-card {
+      background: white; border-radius: 20px; padding: 40px 36px;
+      width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+    }
+    .auth-logo { text-align: center; margin-bottom: 28px; }
+    .auth-logo .logo-icon { font-size: 2.8rem; }
+    .auth-logo h1 { font-size: 1.5rem; font-weight: 700; color: var(--green); margin-top: 6px; }
+    .auth-logo p { color: var(--text-light); font-size: 0.88rem; margin-top: 2px; }
+    .auth-tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 24px; }
+    .auth-tab {
+      flex: 1; padding: 10px; text-align: center; font-weight: 600;
+      cursor: pointer; color: var(--text-light); border-bottom: 3px solid transparent;
+      margin-bottom: -2px; transition: all 0.2s;
+    }
+    .auth-tab.active { color: var(--green); border-bottom-color: var(--green); }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .form-group input {
+      width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
+      border-radius: 10px; font-size: 0.95rem; transition: border 0.2s; outline: none;
+    }
+    .form-group input:focus { border-color: var(--green); }
+    .auth-btn {
+      width: 100%; padding: 13px; background: var(--green); color: white;
+      border: none; border-radius: 10px; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: background 0.2s; margin-top: 4px;
+    }
+    .auth-btn:hover { background: var(--green-dark); }
+    .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .auth-error { color: #dc2626; font-size: 0.85rem; margin-top: 8px; text-align: center; display: none; }
+
+    /* ── APP ── */
+    #app-screen { display: none; flex-direction: row; height: 100vh; }
+    .sidebar {
+      width: 260px; min-width: 260px; background: var(--sidebar-bg);
+      display: flex; flex-direction: column; height: 100vh;
+    }
+    .sidebar-header { padding: 20px 16px 12px; border-bottom: 1px solid #1f2937; }
+    .sidebar-logo { color: #fff; font-weight: 700; font-size: 1.1rem; margin-bottom: 12px; }
+    .sidebar-logo span { color: #86efac; }
+    .new-chat-btn {
+      width: 100%; padding: 9px 14px; background: var(--green); color: white;
+      border: none; border-radius: 8px; font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; text-align: left; transition: background 0.2s;
+    }
+    .new-chat-btn:hover { background: var(--green-dark); }
+    .chat-history { flex: 1; overflow-y: auto; padding: 10px 8px; }
+    .chat-history::-webkit-scrollbar { width: 4px; }
+    .chat-history::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+    .history-item {
+      padding: 9px 10px; border-radius: 8px; cursor: pointer;
+      color: var(--sidebar-text); font-size: 0.85rem;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 2px; transition: background 0.15s;
+    }
+    .history-item:hover { background: var(--sidebar-hover); }
+    .history-item.active { background: #1e3a2f; color: #86efac; }
+    .history-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .history-del { opacity: 0; font-size: 0.8rem; padding: 2px 6px; border-radius: 4px; background: #374151; color: #9ca3af; border: none; cursor: pointer; }
+    .history-item:hover .history-del { opacity: 1; }
+    .sidebar-footer { padding: 12px 16px; border-top: 1px solid #1f2937; display: flex; gap: 8px; flex-wrap: wrap; }
+    .footer-btn {
+      flex: 1; min-width: 80px; padding: 7px 10px; border: 1px solid #374151;
+      background: transparent; color: #9ca3af; border-radius: 8px; font-size: 0.78rem;
+      cursor: pointer; text-align: center; transition: all 0.2s;
+    }
+    .footer-btn:hover { background: #1f2937; color: #d1d5db; }
+    .logout-btn { color: #f87171; border-color: #451a1a; }
+    .logout-btn:hover { background: #1f1010; color: #fca5a5; }
+
+    .main { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .topbar {
+      padding: 14px 20px; background: white; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .hamburger { display: none; background: none; border: none; font-size: 1.3rem; cursor: pointer; }
+    .topbar-title { font-weight: 700; color: var(--green); font-size: 1rem; }
+    .topbar-user { margin-left: auto; font-size: 0.82rem; color: var(--text-light); }
+
+    .filter-area { background: white; border-bottom: 1px solid var(--border); }
+    .subject-bar {
+      padding: 10px 16px 6px; display: flex; gap: 8px;
+      overflow-x: auto; align-items: center;
+    }
+    .subject-bar::-webkit-scrollbar { height: 3px; }
+    .year-bar {
+      padding: 4px 16px 10px; display: flex; gap: 6px; overflow-x: auto; align-items: center;
+    }
+    .subject-btn, .year-btn {
+      padding: 6px 12px; border-radius: 20px; border: 1.5px solid var(--border);
+      background: white; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+      white-space: nowrap; transition: all 0.2s; color: var(--text);
+    }
+    .subject-btn.active, .year-btn.active { background: var(--green); color: white; border-color: var(--green); }
+    .lang-toggle {
+      margin-left: auto; padding: 6px 12px; border-radius: 20px;
+      border: 1.5px solid var(--border); background: white; font-size: 0.78rem;
+      cursor: pointer; font-weight: 600; color: var(--text); white-space: nowrap;
+    }
+    .action-btns { display: flex; gap: 8px; padding: 8px 16px; flex-wrap: wrap; background: white; border-bottom: 1px solid var(--border); }
+    .action-btn {
+      padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--border);
+      background: white; font-size: 0.8rem; cursor: pointer; font-weight: 600;
+      transition: all 0.2s; color: var(--text);
+    }
+    .action-btn:hover { border-color: var(--green); color: var(--green); background: var(--green-light); }
+
+    .messages {
+      flex: 1; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 14px;
+    }
+    .messages::-webkit-scrollbar { width: 5px; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .msg { display: flex; gap: 10px; align-items: flex-start; max-width: 820px; width: 100%; }
+    .msg.user { flex-direction: row-reverse; margin-left: auto; }
+    .avatar {
+      width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 1rem; flex-shrink: 0;
+    }
+    .avatar.bot { background: var(--green-light); }
+    .avatar.user { background: var(--green); color: white; }
+    .bubble {
+      padding: 12px 16px; border-radius: 14px; font-size: 0.92rem; line-height: 1.65;
+      max-width: calc(100% - 50px);
+    }
+    .msg.bot .bubble { background: var(--bot-bubble); color: var(--text); border-radius: 4px 14px 14px 14px; }
+    .msg.user .bubble { background: var(--user-bubble); color: white; border-radius: 14px 4px 14px 14px; }
+    .bubble pre { background: #1e2938; color: #e2e8f0; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 0.82rem; margin-top: 8px; }
+    .bubble code { background: #e8f5e9; color: #166534; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; }
+    .bubble pre code { background: none; color: inherit; padding: 0; }
+    .mcq-options { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .mcq-opt {
+      padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px;
+      cursor: pointer; background: white; text-align: left; font-size: 0.88rem;
+      transition: all 0.2s; font-weight: 500;
+    }
+    .mcq-opt:hover:not(:disabled) { border-color: var(--green); background: var(--green-light); }
+    .mcq-opt:disabled { opacity: 0.7; cursor: default; }
+    .timer-bar { height: 4px; background: #e5e7eb; border-radius: 2px; margin-bottom: 10px; overflow: hidden; }
+    .timer-fill { height: 100%; background: var(--green); transition: width 1s linear; }
+    .timer-text { font-size: 0.78rem; color: var(--text-light); margin-bottom: 6px; }
+    .input-area {
+      padding: 12px 16px; background: white; border-top: 1px solid var(--border);
+      display: flex; gap: 10px; align-items: flex-end;
+    }
+    .input-wrap { flex: 1; }
+    #user-input {
+      width: 100%; padding: 12px 14px; border: 1.5px solid var(--border);
+      border-radius: 12px; font-size: 0.93rem; outline: none; resize: none;
+      font-family: inherit; max-height: 120px; min-height: 46px; line-height: 1.4;
+      transition: border 0.2s;
+    }
+    #user-input:focus { border-color: var(--green); }
+    .send-btn, .stop-btn {
+      padding: 12px 18px; border: none; border-radius: 12px; font-size: 1rem;
+      cursor: pointer; font-weight: 600; transition: all 0.2s; min-width: 50px;
+      align-items: center; justify-content: center;
+    }
+    .send-btn { background: var(--green); color: white; }
+    .send-btn:hover { background: var(--green-dark); }
+    .stop-btn { background: #dc2626; color: white; }
+    .stop-btn:hover { background: #b91c1c; }
+    .empty-state { text-align: center; margin: auto; color: var(--text-light); padding: 40px; }
+    .empty-state .emoji { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state h2 { font-size: 1.3rem; color: var(--text); margin-bottom: 6px; }
+    .typing { display: flex; gap: 4px; padding: 4px 0; }
+    .typing span { width: 8px; height: 8px; background: var(--green); border-radius: 50%; animation: bounce 1.2s infinite; }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+    .avg-badge { font-size: 0.75rem; color: var(--text-light); padding: 4px 10px; background: var(--green-light); border-radius: 12px; }
+
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10; }
+    @media (max-width: 700px) {
+      .sidebar { position: fixed; left: -260px; top: 0; bottom: 0; z-index: 20; transition: left 0.25s; }
+      .sidebar.open { left: 0; }
+      .sidebar-overlay.show { display: block; }
+      .hamburger { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="logo-icon">🩺</div>
+      <h1>MDCAT Bot</h1>
+      <p>StudyPath PK — Medical Prep</p>
+    </div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchTab('login')">Login</div>
+      <div class="auth-tab" onclick="switchTab('signup')">Sign Up</div>
+    </div>
+    <div id="login-form">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="tumhara@email.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-pass" placeholder="••••••••" />
+      </div>
+      <button class="auth-btn" id="login-btn" onclick="doLogin()">Login →</button>
+      <div class="auth-error" id="login-error"></div>
+    </div>
+    <div id="signup-form" style="display:none">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="signup-name" placeholder="Tumhara naam" />
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="signup-email" placeholder="tumhara@email.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="signup-pass" placeholder="••••••••" />
+      </div>
+      <button class="auth-btn" id="signup-btn" onclick="doSignup()">Create Account →</button>
+      <div class="auth-error" id="signup-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- APP SCREEN -->
+<div id="app-screen">
+  <div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">🩺 <span>MDCAT</span> Bot</div>
+      <button class="new-chat-btn" onclick="newChat()">✏️ Naya Sawal</button>
+    </div>
+    <div class="chat-history" id="chat-history-list"></div>
+    <div class="sidebar-footer">
+      <button class="footer-btn" id="dark-btn" onclick="toggleDark()">🌙 Dark</button>
+      <button class="footer-btn logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="hamburger" onclick="openSidebar()">☰</button>
+      <span class="topbar-title">🩺 MDCAT Bot</span>
+      <span id="avg-display" class="avg-badge" style="display:none"></span>
+      <span class="topbar-user" id="topbar-user"></span>
+    </div>
+
+    <div class="filter-area">
+      <div class="subject-bar">
+        <button class="subject-btn active" onclick="setSubject('All',this)">📚 All</button>
+        <button class="subject-btn" onclick="setSubject('Biology',this)">🧬 Biology</button>
+        <button class="subject-btn" onclick="setSubject('Chemistry',this)">🧪 Chemistry</button>
+        <button class="subject-btn" onclick="setSubject('Physics',this)">⚛️ Physics</button>
+        <button class="subject-btn" onclick="setSubject('English',this)">📝 English</button>
+        <button class="subject-btn" onclick="setSubject('Logical Reasoning',this)">🧠 Logical</button>
+        <button class="lang-toggle" id="lang-btn" onclick="toggleLang()">🌐 Roman Urdu</button>
+      </div>
+      <div class="year-bar">
+        <span style="font-size:0.75rem;color:var(--text-light);font-weight:600;white-space:nowrap">Past Paper:</span>
+        <button class="year-btn active" onclick="setYear('any',this)">Any</button>
+        <button class="year-btn" onclick="setYear('2024',this)">2024</button>
+        <button class="year-btn" onclick="setYear('2023',this)">2023</button>
+        <button class="year-btn" onclick="setYear('2022',this)">2022</button>
+        <button class="year-btn" onclick="setYear('2021',this)">2021</button>
+        <button class="year-btn" onclick="setYear('2020',this)">2020</button>
+        <button class="year-btn" onclick="setYear('2019',this)">2019</button>
+      </div>
+    </div>
+
+    <div class="action-btns">
+      <button class="action-btn" onclick="startMCQ()">🎯 MCQ Practice</button>
+      <button class="action-btn" onclick="askDiagram()">🔬 Biology Diagram</button>
+      <button class="action-btn" onclick="askWeightage()">📊 Topic Weightage</button>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="empty-state">
+        <div class="emoji">🩺</div>
+        <h2>MDCAT Bot Ready!</h2>
+        <p>Biology, Chemistry, Physics, English, Logical Reasoning<br>MCQ practice, diagrams, topic weightage — sab yahan!</p>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrap">
+        <textarea id="user-input" rows="1" placeholder="Sawal likho yahan..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      </div>
+      <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+      <button class="stop-btn" id="stop-btn" onclick="stopResponse()" style="display:none;">⏹</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let currentUser = null;         // { email, name, token }
+let currentSubject = "All";
+let currentLang = "roman_urdu";
+let currentYear = "any";
+let isGenerating = false;
+let abortController = null;
+let currentMCQ = null;
+let mcqTimer = null;
+let mcqTimeLeft = 60;
+let mcqTimes = [];
+let chats = [];
+let currentChatId = null;
+let darkMode = false;
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll(".auth-tab").forEach((t, i) =>
+    t.classList.toggle("active", (i === 0 && tab === "login") || (i === 1 && tab === "signup"))
+  );
+  document.getElementById("login-form").style.display  = tab === "login"  ? "block" : "none";
+  document.getElementById("signup-form").style.display = tab === "signup" ? "block" : "none";
+}
+
+async function doLogin() {
+  const email = document.getElementById("login-email").value.trim();
+  const pass  = document.getElementById("login-pass").value;
+  const errEl = document.getElementById("login-error");
+  const btn   = document.getElementById("login-btn");
+  errEl.style.display = "none";
+  if (!email || !pass) { errEl.textContent = "Email aur password bharo!"; errEl.style.display = "block"; return; }
+  btn.disabled = true; btn.textContent = "Logging in...";
+  try {
+    const res  = await fetch("/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password: pass })
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || "Login failed"; errEl.style.display = "block"; return; }
+    currentUser = { email: data.email, name: data.name, token: data.token };
+    // Store only non-sensitive session info; token kept in memory only
+    sessionStorage.setItem("mdcat_session", JSON.stringify({ email: data.email, name: data.name, token: data.token }));
+    showApp();
+  } catch (e) {
+    errEl.textContent = "Server se connection nahi ho raha!"; errEl.style.display = "block";
+  } finally {
+    btn.disabled = false; btn.textContent = "Login →";
+  }
+}
+
+async function doSignup() {
+  const name  = document.getElementById("signup-name").value.trim();
+  const email = document.getElementById("signup-email").value.trim();
+  const pass  = document.getElementById("signup-pass").value;
+  const errEl = document.getElementById("signup-error");
+  const btn   = document.getElementById("signup-btn");
+  errEl.style.display = "none";
+  if (!name || !email || !pass) { errEl.textContent = "Sab fields bharo!"; errEl.style.display = "block"; return; }
+  if (pass.length < 6) { errEl.textContent = "Password kam az kam 6 characters ka hona chahiye!"; errEl.style.display = "block"; return; }
+  btn.disabled = true; btn.textContent = "Creating...";
+  try {
+    const res  = await fetch("/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password: pass })
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || "Signup failed"; errEl.style.display = "block"; return; }
+    currentUser = { email: data.email, name: data.name, token: data.token };
+    sessionStorage.setItem("mdcat_session", JSON.stringify({ email: data.email, name: data.name, token: data.token }));
+    showApp();
+  } catch (e) {
+    errEl.textContent = "Server se connection nahi ho raha!"; errEl.style.display = "block";
+  } finally {
+    btn.disabled = false; btn.textContent = "Create Account →";
+  }
+}
+
+async function doLogout() {
+  if (currentUser?.token) {
+    await fetch("/auth/logout", {
+      method: "POST",
+      headers: { "x-session-token": currentUser.token }
+    }).catch(() => {});
+  }
+  sessionStorage.removeItem("mdcat_session");
+  currentUser = null;
+  document.getElementById("app-screen").style.display = "none";
+  document.getElementById("auth-screen").style.display = "flex";
+}
+
+function showApp() {
+  document.getElementById("auth-screen").style.display = "none";
+  document.getElementById("app-screen").style.display = "flex";
+  document.getElementById("topbar-user").textContent = `👤 ${currentUser.name}`;
+  loadChats(); renderHistory();
+  // Restore dark mode preference
+  if (localStorage.getItem("mdcat_dark") === "1") {
+    darkMode = false; // toggleDark will flip it
+    toggleDark();
+  }
+}
+
+window.addEventListener("load", () => {
+  const s = sessionStorage.getItem("mdcat_session");
+  if (s) { currentUser = JSON.parse(s); showApp(); }
+});
+
+// ─── DARK MODE ────────────────────────────────────────────────────────────────
+function toggleDark() {
+  darkMode = !darkMode;
+  localStorage.setItem("mdcat_dark", darkMode ? "1" : "0");
+  const d = darkMode;
+  document.documentElement.style.setProperty("--bg",         d ? "#0f172a" : "#f9fafb");
+  document.documentElement.style.setProperty("--bot-bubble", d ? "#1e293b" : "#f3f4f6");
+  document.documentElement.style.setProperty("--text",       d ? "#f1f5f9" : "#111827");
+  document.documentElement.style.setProperty("--text-light", d ? "#94a3b8" : "#6b7280");
+  document.documentElement.style.setProperty("--border",     d ? "#334155" : "#e5e7eb");
+  const panels = [
+    document.querySelector(".topbar"), document.querySelector(".filter-area"),
+    document.querySelector(".action-btns"), document.querySelector(".input-area")
+  ];
+  panels.forEach(el => { if (el) el.style.background = d ? "#1e293b" : ""; });
+  document.querySelectorAll(".subject-btn, .year-btn, .action-btn, .lang-toggle").forEach(btn => {
+    if (!btn.classList.contains("active")) {
+      btn.style.background  = d ? "#0f172a" : "";
+      btn.style.color       = d ? "#cbd5e1" : "";
+      btn.style.borderColor = d ? "#334155" : "";
+    }
+  });
+  const inp = document.getElementById("user-input");
+  if (inp) { inp.style.background = d ? "#0f172a" : ""; inp.style.color = d ? "#f1f5f9" : ""; inp.style.borderColor = d ? "#334155" : ""; }
+  document.getElementById("dark-btn").textContent = d ? "☀️ Light" : "🌙 Dark";
+}
+
+function openSidebar()  { document.getElementById("sidebar").classList.add("open");    document.getElementById("overlay").classList.add("show"); }
+function closeSidebar() { document.getElementById("sidebar").classList.remove("open"); document.getElementById("overlay").classList.remove("show"); }
+
+// ─── CHAT HISTORY ─────────────────────────────────────────────────────────────
+function chatKey()    { return `mdcat_chats_${currentUser.email}`; }
+function loadChats()  { chats = JSON.parse(localStorage.getItem(chatKey()) || "[]"); }
+function saveChats()  { localStorage.setItem(chatKey(), JSON.stringify(chats)); }
+
+function renderHistory() {
+  const list = document.getElementById("chat-history-list");
+  list.innerHTML = "";
+  [...chats].reverse().forEach(chat => {
+    const div = document.createElement("div");
+    div.className = "history-item" + (chat.id === currentChatId ? " active" : "");
+    const titleSpan = document.createElement("span");
+    titleSpan.className = "history-title";
+    titleSpan.textContent = chat.title; // safe textContent
+    const delBtn = document.createElement("button");
+    delBtn.className = "history-del";
+    delBtn.textContent = "🗑";
+    delBtn.addEventListener("click", (e) => deleteChat(chat.id, e));
+    div.appendChild(titleSpan);
+    div.appendChild(delBtn);
+    div.addEventListener("click", () => loadChat(chat.id));
+    list.appendChild(div);
+  });
+}
+
+function newChat() {
+  currentChatId = null; currentMCQ = null; clearInterval(mcqTimer);
+  document.getElementById("messages").innerHTML = `
+    <div class="empty-state">
+      <div class="emoji">🩺</div>
+      <h2>MDCAT Bot Ready!</h2>
+      <p>Biology, Chemistry, Physics, English, Logical Reasoning<br>MCQ practice, diagrams, topic weightage — sab yahan!</p>
+    </div>`;
+  renderHistory(); closeSidebar();
+}
+
+function loadChat(id) {
+  const chat = chats.find(c => c.id === id);
+  if (!chat) return;
+  currentChatId = id;
+  const box = document.getElementById("messages");
+  box.innerHTML = "";
+  chat.messages.forEach(m => {
+    const div = document.createElement("div");
+    div.className = `msg ${m.role}`;
+    div.innerHTML = `<div class="avatar ${m.role}">${m.role === "bot" ? "🩺" : "👤"}</div><div class="bubble">${m.html || escapeHtml(m.text)}</div>`;
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+  renderHistory(); closeSidebar();
+  if (window.MathJax) MathJax.typesetPromise();
+}
+
+function deleteChat(id, e) {
+  e.stopPropagation();
+  chats = chats.filter(c => c.id !== id);
+  saveChats();
+  if (currentChatId === id) newChat();
+  else renderHistory();
+}
+
+function addToHistory(userText, botHtml) {
+  if (!currentChatId) {
+    currentChatId = Date.now().toString();
+    chats.push({ id: currentChatId, title: userText.slice(0, 40) || "New Chat", messages: [] });
+  }
+  const chat = chats.find(c => c.id === currentChatId);
+  chat.messages.push({ role: "user", text: userText });
+  chat.messages.push({ role: "bot",  html: botHtml });
+  saveChats(); renderHistory();
+}
+
+// ─── FILTERS ──────────────────────────────────────────────────────────────────
+function setSubject(s, btn) {
+  currentSubject = s;
+  document.querySelectorAll(".subject-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+}
+function setYear(y, btn) {
+  currentYear = y;
+  document.querySelectorAll(".year-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+}
+function toggleLang() {
+  currentLang = currentLang === "roman_urdu" ? "english" : "roman_urdu";
+  document.getElementById("lang-btn").textContent = currentLang === "english" ? "🌐 English" : "🌐 Roman Urdu";
+}
+
+// ─── SPECIAL ACTIONS ──────────────────────────────────────────────────────────
+function askDiagram() {
+  const topic = prompt("Konsa structure ya diagram chahiye? (e.g. Heart, Mitochondria, Nephron)");
+  if (!topic) return;
+  addUserMessage(`🔬 Diagram: ${escapeHtml(topic)}`);
+  addBotMessage('<div class="typing"><span></span><span></span><span></span></div>', true);
+  const userText = `Diagram: ${topic}`;
+  fetchStream({ mode: "diagram", message: topic, subject: currentSubject, language: currentLang, year: currentYear }, (html) => {
+    addToHistory(userText, html);
+  });
+}
+
+function askWeightage() {
+  addUserMessage(`📊 ${currentSubject === "All" ? "MDCAT" : currentSubject} topic weightage`);
+  addBotMessage('<div class="typing"><span></span><span></span><span></span></div>', true);
+  const userText = `Topic weightage: ${currentSubject}`;
+  fetchStream({ mode: "weightage", message: "weightage", subject: currentSubject, language: currentLang, year: currentYear }, (html) => {
+    addToHistory(userText, html);
+  });
+}
+
+// ─── MCQ ─────────────────────────────────────────────────────────────────────
+function startMCQ() {
+  if (isGenerating) return;
+  addBotMessage('<div class="typing"><span></span><span></span><span></span></div>', true);
+  const mcqStart = Date.now();
+  fetchStream({ mode: "mcq", subject: currentSubject, language: currentLang, year: currentYear, message: "Generate MCQ" }, (html) => {
+    const parsed = parseMCQ(html);
+    if (parsed) {
+      parsed._startTime = mcqStart;
+      currentMCQ = parsed;
+      showMCQ(parsed);
+      startTimer();
+    }
+  });
+}
+
+function parseMCQ(text) {
+  const clean = text.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ");
+  const opts = [...clean.matchAll(/^([A-D])[\)\.\:]\s*(.+)/gm)];
+  if (opts.length < 2) return null;
+  const firstOptIndex = clean.indexOf(opts[0][0]);
+  let question = clean.substring(0, firstOptIndex).trim();
+  question = question
+    .replace(/^\*{0,2}Sawal\*{0,2}[\:\s]*/i, "")
+    .replace(/^\*{0,2}Question\*{0,2}[\:\s]*/i, "")
+    .replace(/\*\*/g, "")
+    .trim();
+  if (!question) return null;
+  return {
+    question,
+    options: opts.map(o => ({ key: o[1], text: o[2].trim() })),
+    raw: text
+  };
+}
+
+function showMCQ(mcq) {
+  const box = document.getElementById("messages");
+  const last = box.lastElementChild;
+  if (last) last.remove();
+
+  const id = "mcq_" + Date.now();
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+
+  // Timer elements
+  const timerText = document.createElement("div");
+  timerText.className = "timer-text";
+  timerText.id = `${id}_timer`;
+  timerText.textContent = "⏱ 60 saniyay";
+
+  const timerBar = document.createElement("div");
+  timerBar.className = "timer-bar";
+  const timerFill = document.createElement("div");
+  timerFill.className = "timer-fill";
+  timerFill.id = `${id}_fill`;
+  timerFill.style.width = "100%";
+  timerBar.appendChild(timerFill);
+
+  // Question text (safe innerHTML from formatText which only adds controlled tags)
+  const qDiv = document.createElement("div");
+  qDiv.innerHTML = "<strong>Sawal:</strong><br><br>" + formatText(mcq.question);
+
+  // Options — built safely with DOM, no inline onclick
+  const optContainer = document.createElement("div");
+  optContainer.className = "mcq-options";
+  mcq.options.forEach(o => {
+    const btn = document.createElement("button");
+    btn.className = "mcq-opt";
+    btn.id = `${id}_${o.key}`;
+    btn.textContent = `${o.key}) ${o.text}`; // safe textContent
+    btn.dataset.key = o.key;
+    btn.dataset.mcqId = id;
+    btn.addEventListener("click", () => answerMCQ(o.key, id));
+    optContainer.appendChild(btn);
+  });
+
+  bubble.appendChild(timerText);
+  bubble.appendChild(timerBar);
+  bubble.appendChild(qDiv);
+  bubble.appendChild(optContainer);
+
+  const div = document.createElement("div");
+  div.className = "msg bot";
+  div.innerHTML = `<div class="avatar bot">🩺</div>`;
+  div.appendChild(bubble);
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+
+  if (window.MathJax) MathJax.typesetPromise();
+  currentMCQ._id = id;
+}
+
+function startTimer() {
+  clearInterval(mcqTimer); mcqTimeLeft = 60;
+  mcqTimer = setInterval(() => {
+    mcqTimeLeft--;
+    const id = currentMCQ?._id;
+    if (!id) { clearInterval(mcqTimer); return; }
+    const timerEl = document.getElementById(`${id}_timer`);
+    const fillEl  = document.getElementById(`${id}_fill`);
+    if (timerEl) timerEl.textContent = `⏱ ${mcqTimeLeft} saniyay`;
+    if (fillEl) {
+      fillEl.style.width      = (mcqTimeLeft / 60 * 100) + "%";
+      fillEl.style.background = mcqTimeLeft <= 10 ? "#dc2626" : "#16a34a";
+    }
+    if (mcqTimeLeft <= 0) {
+      clearInterval(mcqTimer); disableMCQOpts(id);
+      addUserMessage("⏰ Time khatam!");
+      getExplanation("Time khatam — jawab nahi diya", id);
+      recordTime(60);
+    }
+  }, 1000);
+}
+
+function answerMCQ(key, id) {
+  clearInterval(mcqTimer); disableMCQOpts(id);
+  const timeTaken = 60 - mcqTimeLeft;
+  recordTime(timeTaken);
+  addUserMessage(`Jawab: ${key}`);
+  getExplanation(key, id);
+}
+
+function recordTime(t) {
+  mcqTimes.push(t);
+  const avg = Math.round(mcqTimes.reduce((a, b) => a + b, 0) / mcqTimes.length);
+  const el = document.getElementById("avg-display");
+  el.style.display = "block";
+  el.textContent   = `⏱ Avg: ${avg}s`;
+}
+
+function disableMCQOpts(id) {
+  ["A", "B", "C", "D"].forEach(k => {
+    const b = document.getElementById(`${id}_${k}`);
+    if (b) b.disabled = true;
+  });
+}
+
+function getExplanation(answer, id) {
+  addBotMessage('<div class="typing"><span></span><span></span><span></span></div>', true);
+  fetchStream(
+    { mode: "mcq_answer", message: answer, previousQuestion: currentMCQ?.raw || "", subject: currentSubject, language: currentLang, year: currentYear },
+    () => {}
+  );
+  currentMCQ = null;
+}
+
+// ─── MESSAGING ────────────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+function addUserMessage(text) {
+  document.querySelector(".empty-state")?.remove();
+  const box = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = "msg user";
+  div.innerHTML = `<div class="avatar user">👤</div><div class="bubble">${escapeHtml(text)}</div>`;
+  box.appendChild(div); box.scrollTop = box.scrollHeight;
+}
+
+function addBotMessage(html, typing = false) {
+  document.querySelector(".empty-state")?.remove();
+  const box = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = "msg bot";
+  div.innerHTML = `<div class="avatar bot">🩺</div><div class="bubble">${html}</div>`;
+  if (typing) div.id = "typing-msg";
+  box.appendChild(div); box.scrollTop = box.scrollHeight;
+  return div;
+}
+
+function sendMessage() {
+  const inp = document.getElementById("user-input");
+  const text = inp.value.trim();
+  if (!text || isGenerating) return;
+  inp.value = ""; inp.style.height = "auto";
+  addUserMessage(text);
+  addBotMessage('<div class="typing"><span></span><span></span><span></span></div>', true);
+  const userText = text;
+  fetchStream({ mode: "chat", message: text, subject: currentSubject, language: currentLang, year: currentYear }, (finalHtml) => {
+    addToHistory(userText, finalHtml);
+  });
+}
+
+function handleKey(e)    { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(el)  { el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 120) + "px"; }
+
+function stopResponse() {
+  if (abortController) abortController.abort();
+  setGenerating(false);
+  const t = document.getElementById("typing-msg");
+  if (t) { t.querySelector(".bubble").innerHTML += "<br><em style='color:#6b7280;font-size:0.8rem'>Response rok di gayi.</em>"; t.id = ""; }
+}
+
+function setGenerating(val) {
+  isGenerating = val;
+  const sendBtn = document.getElementById("send-btn");
+  const stopBtn = document.getElementById("stop-btn");
+  if (val) {
+    sendBtn.style.setProperty("display", "none", "important");
+    stopBtn.style.setProperty("display", "inline-flex", "important");
+  } else {
+    sendBtn.style.setProperty("display", "inline-flex", "important");
+    stopBtn.style.setProperty("display", "none", "important");
+  }
+}
+
+// ─── FETCH STREAM (SSE) ───────────────────────────────────────────────────────
+async function fetchStream(payload, onDone) {
+  setGenerating(true);
+  abortController = new AbortController();
+  let fullText = "";
+  try {
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-session-token": currentUser?.token || ""
+      },
+      body: JSON.stringify(payload),
+      signal: abortController.signal
+    });
+
+    if (res.status === 401) {
+      // Session expired — send back to login
+      await doLogout();
+      return;
+    }
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    const typingMsg = document.getElementById("typing-msg");
+    const bubble    = typingMsg?.querySelector(".bubble");
+    if (bubble) bubble.innerHTML = "";
+
+    outer: while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value);
+      for (const line of chunk.split("\n")) {
+        if (line.startsWith("data: ")) {
+          const data = line.slice(6);
+          if (data === "[DONE]") break outer; // ← FIX: exits both loops
+          try {
+            const { text } = JSON.parse(data);
+            fullText += text;
+            if (bubble) {
+              bubble.innerHTML = formatText(fullText);
+              document.getElementById("messages").scrollTop = 99999;
+            }
+          } catch { /* incomplete JSON chunk, skip */ }
+        }
+      }
+    }
+
+    if (typingMsg) typingMsg.id = "";
+    if (window.MathJax) MathJax.typesetPromise();
+    onDone(formatText(fullText));
+  } catch (err) {
+    if (err.name !== "AbortError") console.error(err);
+  } finally {
+    setGenerating(false);
+  }
+}
+
+// ─── FORMAT TEXT ──────────────────────────────────────────────────────────────
+function formatText(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.*?)\*/g, "<em>$1</em>")
+    .replace(/```(\w*)\n?([\s\S]*?)```/g, "<pre><code>$2</code></pre>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\n/g, "<br>");
+}
+</script>
+</body>
+</html>
