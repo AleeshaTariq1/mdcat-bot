@@ -114,7 +114,10 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       : "MDCAT style question banana.";
 
     let prompt;
-
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`MDCAT Bot chal raha hai — port ${PORT} pe!`);
+});
     if (mode === "mcq") {
       prompt = `
 Tu ek MDCAT preparation assistant hai Pakistan ke medical students ke liye.
@@ -212,6 +215,7 @@ Student ka sawal: ${userMessage}
   }
 });
 
-app.listen(3000, () => {
-  console.log("MDCAT Bot is Running on — port 3000!");
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`MDCAT Bot Running on — port ${PORT} !`);
 });
