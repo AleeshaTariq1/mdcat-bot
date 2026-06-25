@@ -56,7 +56,6 @@
       cursor: pointer; transition: background 0.2s; margin-top: 4px;
     }
     .auth-btn:hover { background: var(--green-dark); }
-    .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .auth-error { color: #dc2626; font-size: 0.85rem; margin-top: 8px; text-align: center; display: none; }
 
     /* ── APP ── */
@@ -107,6 +106,7 @@
     .topbar-title { font-weight: 700; color: var(--green); font-size: 1rem; }
     .topbar-user { margin-left: auto; font-size: 0.82rem; color: var(--text-light); }
 
+    /* Subject + Year + Lang bars */
     .filter-area { background: white; border-bottom: 1px solid var(--border); }
     .subject-bar {
       padding: 10px 16px 6px; display: flex; gap: 8px;
@@ -163,7 +163,7 @@
       cursor: pointer; background: white; text-align: left; font-size: 0.88rem;
       transition: all 0.2s; font-weight: 500;
     }
-    .mcq-opt:hover:not(:disabled) { border-color: var(--green); background: var(--green-light); }
+    .mcq-opt:hover { border-color: var(--green); background: var(--green-light); }
     .mcq-opt:disabled { opacity: 0.7; cursor: default; }
     .timer-bar { height: 4px; background: #e5e7eb; border-radius: 2px; margin-bottom: 10px; overflow: hidden; }
     .timer-fill { height: 100%; background: var(--green); transition: width 1s linear; }
@@ -183,7 +183,6 @@
     .send-btn, .stop-btn {
       padding: 12px 18px; border: none; border-radius: 12px; font-size: 1rem;
       cursor: pointer; font-weight: 600; transition: all 0.2s; min-width: 50px;
-      align-items: center; justify-content: center;
     }
     .send-btn { background: var(--green); color: white; }
     .send-btn:hover { background: var(--green-dark); }
@@ -231,8 +230,8 @@
         <label>Password</label>
         <input type="password" id="login-pass" placeholder="••••••••" />
       </div>
-      <button class="auth-btn" id="login-btn" onclick="doLogin()">Login →</button>
-      <div class="auth-error" id="login-error"></div>
+      <button class="auth-btn" onclick="doLogin()">Login →</button>
+      <div class="auth-error" id="login-error">Email ya password ghalat hai!</div>
     </div>
     <div id="signup-form" style="display:none">
       <div class="form-group">
@@ -247,7 +246,7 @@
         <label>Password</label>
         <input type="password" id="signup-pass" placeholder="••••••••" />
       </div>
-      <button class="auth-btn" id="signup-btn" onclick="doSignup()">Create Account →</button>
+      <button class="auth-btn" onclick="doSignup()">Create Account →</button>
       <div class="auth-error" id="signup-error"></div>
     </div>
   </div>
@@ -263,7 +262,7 @@
     </div>
     <div class="chat-history" id="chat-history-list"></div>
     <div class="sidebar-footer">
-      <button class="footer-btn" id="dark-btn" onclick="toggleDark()">🌙 Dark</button>
+      <button class="footer-btn" onclick="toggleDark()">🌙 Dark</button>
       <button class="footer-btn logout-btn" onclick="doLogout()">Logout</button>
     </div>
   </div>
@@ -284,7 +283,7 @@
         <button class="subject-btn" onclick="setSubject('Physics',this)">⚛️ Physics</button>
         <button class="subject-btn" onclick="setSubject('English',this)">📝 English</button>
         <button class="subject-btn" onclick="setSubject('Logical Reasoning',this)">🧠 Logical</button>
-        <button class="lang-toggle" id="lang-btn" onclick="toggleLang()">🌐 Roman Urdu</button>
+        <button class="lang-toggle" onclick="toggleLang()">🌐 Roman Urdu</button>
       </div>
       <div class="year-bar">
         <span style="font-size:0.75rem;color:var(--text-light);font-weight:600;white-space:nowrap">Past Paper:</span>
@@ -317,14 +316,14 @@
         <textarea id="user-input" rows="1" placeholder="Sawal likho yahan..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
       </div>
       <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
-      <button class="stop-btn" id="stop-btn" onclick="stopResponse()" style="display:none;">⏹</button>
+      <button class="stop-btn" id="stop-btn" style="display:none" onclick="stopResponse()">⏹</button>
     </div>
   </div>
 </div>
 
 <script>
-// ─── STATE ────────────────────────────────────────────────────────────────────
-let currentUser = null;         // { email, name, token }
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let currentUser = null;
 let currentSubject = "All";
 let currentLang = "roman_urdu";
 let currentYear = "any";
@@ -339,77 +338,45 @@ let currentChatId = null;
 let darkMode = false;
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
+function getUsers() { return JSON.parse(localStorage.getItem("mdcat_users") || "{}"); }
+function saveUsers(u) { localStorage.setItem("mdcat_users", JSON.stringify(u)); }
+
 function switchTab(tab) {
-  document.querySelectorAll(".auth-tab").forEach((t, i) =>
-    t.classList.toggle("active", (i === 0 && tab === "login") || (i === 1 && tab === "signup"))
-  );
-  document.getElementById("login-form").style.display  = tab === "login"  ? "block" : "none";
-  document.getElementById("signup-form").style.display = tab === "signup" ? "block" : "none";
+  document.querySelectorAll(".auth-tab").forEach((t,i) => t.classList.toggle("active", (i===0&&tab==="login")||(i===1&&tab==="signup")));
+  document.getElementById("login-form").style.display = tab==="login" ? "block" : "none";
+  document.getElementById("signup-form").style.display = tab==="signup" ? "block" : "none";
 }
 
-async function doLogin() {
+function doLogin() {
   const email = document.getElementById("login-email").value.trim();
-  const pass  = document.getElementById("login-pass").value;
-  const errEl = document.getElementById("login-error");
-  const btn   = document.getElementById("login-btn");
-  errEl.style.display = "none";
-  if (!email || !pass) { errEl.textContent = "Email aur password bharo!"; errEl.style.display = "block"; return; }
-  btn.disabled = true; btn.textContent = "Logging in...";
-  try {
-    const res  = await fetch("/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password: pass })
-    });
-    const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || "Login failed"; errEl.style.display = "block"; return; }
-    currentUser = { email: data.email, name: data.name, token: data.token };
-    // Store only non-sensitive session info; token kept in memory only
-    sessionStorage.setItem("mdcat_session", JSON.stringify({ email: data.email, name: data.name, token: data.token }));
+  const pass = document.getElementById("login-pass").value;
+  const users = getUsers();
+  if (users[email] && users[email].password === pass) {
+    currentUser = { email, name: users[email].name };
+    localStorage.setItem("mdcat_session", JSON.stringify(currentUser));
     showApp();
-  } catch (e) {
-    errEl.textContent = "Server se connection nahi ho raha!"; errEl.style.display = "block";
-  } finally {
-    btn.disabled = false; btn.textContent = "Login →";
+  } else {
+    document.getElementById("login-error").style.display = "block";
   }
 }
 
-async function doSignup() {
-  const name  = document.getElementById("signup-name").value.trim();
+function doSignup() {
+  const name = document.getElementById("signup-name").value.trim();
   const email = document.getElementById("signup-email").value.trim();
-  const pass  = document.getElementById("signup-pass").value;
-  const errEl = document.getElementById("signup-error");
-  const btn   = document.getElementById("signup-btn");
-  errEl.style.display = "none";
-  if (!name || !email || !pass) { errEl.textContent = "Sab fields bharo!"; errEl.style.display = "block"; return; }
-  if (pass.length < 6) { errEl.textContent = "Password kam az kam 6 characters ka hona chahiye!"; errEl.style.display = "block"; return; }
-  btn.disabled = true; btn.textContent = "Creating...";
-  try {
-    const res  = await fetch("/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password: pass })
-    });
-    const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || "Signup failed"; errEl.style.display = "block"; return; }
-    currentUser = { email: data.email, name: data.name, token: data.token };
-    sessionStorage.setItem("mdcat_session", JSON.stringify({ email: data.email, name: data.name, token: data.token }));
-    showApp();
-  } catch (e) {
-    errEl.textContent = "Server se connection nahi ho raha!"; errEl.style.display = "block";
-  } finally {
-    btn.disabled = false; btn.textContent = "Create Account →";
-  }
+  const pass = document.getElementById("signup-pass").value;
+  const err = document.getElementById("signup-error");
+  if (!name || !email || !pass) { err.textContent="Sab fields bharo!"; err.style.display="block"; return; }
+  const users = getUsers();
+  if (users[email]) { err.textContent="Yeh email already registered hai!"; err.style.display="block"; return; }
+  users[email] = { name, password: pass };
+  saveUsers(users);
+  currentUser = { email, name };
+  localStorage.setItem("mdcat_session", JSON.stringify(currentUser));
+  showApp();
 }
 
-async function doLogout() {
-  if (currentUser?.token) {
-    await fetch("/auth/logout", {
-      method: "POST",
-      headers: { "x-session-token": currentUser.token }
-    }).catch(() => {});
-  }
-  sessionStorage.removeItem("mdcat_session");
+function doLogout() {
+  localStorage.removeItem("mdcat_session");
   currentUser = null;
   document.getElementById("app-screen").style.display = "none";
   document.getElementById("auth-screen").style.display = "flex";
@@ -420,32 +387,23 @@ function showApp() {
   document.getElementById("app-screen").style.display = "flex";
   document.getElementById("topbar-user").textContent = `👤 ${currentUser.name}`;
   loadChats(); renderHistory();
-  // Restore dark mode preference
-  if (localStorage.getItem("mdcat_dark") === "1") {
-    darkMode = false; // toggleDark will flip it
-    toggleDark();
-  }
 }
 
 window.addEventListener("load", () => {
-  const s = sessionStorage.getItem("mdcat_session");
+  const s = localStorage.getItem("mdcat_session");
   if (s) { currentUser = JSON.parse(s); showApp(); }
 });
 
 // ─── DARK MODE ────────────────────────────────────────────────────────────────
 function toggleDark() {
   darkMode = !darkMode;
-  localStorage.setItem("mdcat_dark", darkMode ? "1" : "0");
   const d = darkMode;
   document.documentElement.style.setProperty("--bg",         d ? "#0f172a" : "#f9fafb");
   document.documentElement.style.setProperty("--bot-bubble", d ? "#1e293b" : "#f3f4f6");
   document.documentElement.style.setProperty("--text",       d ? "#f1f5f9" : "#111827");
   document.documentElement.style.setProperty("--text-light", d ? "#94a3b8" : "#6b7280");
   document.documentElement.style.setProperty("--border",     d ? "#334155" : "#e5e7eb");
-  const panels = [
-    document.querySelector(".topbar"), document.querySelector(".filter-area"),
-    document.querySelector(".action-btns"), document.querySelector(".input-area")
-  ];
+  const panels = [document.querySelector(".topbar"), document.querySelector(".filter-area"), document.querySelector(".action-btns"), document.querySelector(".input-area")];
   panels.forEach(el => { if (el) el.style.background = d ? "#1e293b" : ""; });
   document.querySelectorAll(".subject-btn, .year-btn, .action-btn, .lang-toggle").forEach(btn => {
     if (!btn.classList.contains("active")) {
@@ -456,16 +414,17 @@ function toggleDark() {
   });
   const inp = document.getElementById("user-input");
   if (inp) { inp.style.background = d ? "#0f172a" : ""; inp.style.color = d ? "#f1f5f9" : ""; inp.style.borderColor = d ? "#334155" : ""; }
-  document.getElementById("dark-btn").textContent = d ? "☀️ Light" : "🌙 Dark";
+  const darkBtn = document.querySelector(".footer-btn:not(.logout-btn)");
+  if (darkBtn) darkBtn.textContent = d ? "☀️ Light" : "🌙 Dark";
 }
 
-function openSidebar()  { document.getElementById("sidebar").classList.add("open");    document.getElementById("overlay").classList.add("show"); }
+function openSidebar() { document.getElementById("sidebar").classList.add("open"); document.getElementById("overlay").classList.add("show"); }
 function closeSidebar() { document.getElementById("sidebar").classList.remove("open"); document.getElementById("overlay").classList.remove("show"); }
 
 // ─── CHAT HISTORY ─────────────────────────────────────────────────────────────
-function chatKey()    { return `mdcat_chats_${currentUser.email}`; }
-function loadChats()  { chats = JSON.parse(localStorage.getItem(chatKey()) || "[]"); }
-function saveChats()  { localStorage.setItem(chatKey(), JSON.stringify(chats)); }
+function chatKey() { return `mdcat_chats_${currentUser.email}`; }
+function loadChats() { chats = JSON.parse(localStorage.getItem(chatKey()) || "[]"); }
+function saveChats() { localStorage.setItem(chatKey(), JSON.stringify(chats)); }
 
 function renderHistory() {
   const list = document.getElementById("chat-history-list");
@@ -473,16 +432,8 @@ function renderHistory() {
   [...chats].reverse().forEach(chat => {
     const div = document.createElement("div");
     div.className = "history-item" + (chat.id === currentChatId ? " active" : "");
-    const titleSpan = document.createElement("span");
-    titleSpan.className = "history-title";
-    titleSpan.textContent = chat.title; // safe textContent
-    const delBtn = document.createElement("button");
-    delBtn.className = "history-del";
-    delBtn.textContent = "🗑";
-    delBtn.addEventListener("click", (e) => deleteChat(chat.id, e));
-    div.appendChild(titleSpan);
-    div.appendChild(delBtn);
-    div.addEventListener("click", () => loadChat(chat.id));
+    div.innerHTML = `<span class="history-title">${chat.title}</span><button class="history-del" onclick="deleteChat('${chat.id}',event)">🗑</button>`;
+    div.onclick = () => loadChat(chat.id);
     list.appendChild(div);
   });
 }
@@ -507,7 +458,7 @@ function loadChat(id) {
   chat.messages.forEach(m => {
     const div = document.createElement("div");
     div.className = `msg ${m.role}`;
-    div.innerHTML = `<div class="avatar ${m.role}">${m.role === "bot" ? "🩺" : "👤"}</div><div class="bubble">${m.html || escapeHtml(m.text)}</div>`;
+    div.innerHTML = `<div class="avatar ${m.role}">${m.role==="bot"?"🩺":"👤"}</div><div class="bubble">${m.html || m.text}</div>`;
     box.appendChild(div);
   });
   box.scrollTop = box.scrollHeight;
@@ -526,11 +477,11 @@ function deleteChat(id, e) {
 function addToHistory(userText, botHtml) {
   if (!currentChatId) {
     currentChatId = Date.now().toString();
-    chats.push({ id: currentChatId, title: userText.slice(0, 40) || "New Chat", messages: [] });
+    chats.push({ id: currentChatId, title: userText.slice(0,40) || "New Chat", messages: [] });
   }
   const chat = chats.find(c => c.id === currentChatId);
   chat.messages.push({ role: "user", text: userText });
-  chat.messages.push({ role: "bot",  html: botHtml });
+  chat.messages.push({ role: "bot", html: botHtml });
   saveChats(); renderHistory();
 }
 
@@ -547,14 +498,14 @@ function setYear(y, btn) {
 }
 function toggleLang() {
   currentLang = currentLang === "roman_urdu" ? "english" : "roman_urdu";
-  document.getElementById("lang-btn").textContent = currentLang === "english" ? "🌐 English" : "🌐 Roman Urdu";
+  document.querySelector(".lang-toggle").textContent = currentLang === "english" ? "🌐 English" : "🌐 Roman Urdu";
 }
 
 // ─── SPECIAL ACTIONS ──────────────────────────────────────────────────────────
 function askDiagram() {
   const topic = prompt("Konsa structure ya diagram chahiye? (e.g. Heart, Mitochondria, Nephron)");
   if (!topic) return;
-  addUserMessage(`🔬 Diagram: ${escapeHtml(topic)}`);
+  addUserMessage(`🔬 Diagram: ${topic}`);
   addBotMessage('<div class="typing"><span></span><span></span><span></span></div>', true);
   const userText = `Diagram: ${topic}`;
   fetchStream({ mode: "diagram", message: topic, subject: currentSubject, language: currentLang, year: currentYear }, (html) => {
@@ -588,17 +539,26 @@ function startMCQ() {
 }
 
 function parseMCQ(text) {
+  // Strip HTML tags for parsing
   const clean = text.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ");
+
+  // Extract options first — match A) B) C) D) with any content after
   const opts = [...clean.matchAll(/^([A-D])[\)\.\:]\s*(.+)/gm)];
   if (opts.length < 2) return null;
+
+  // Extract question — everything before the first option line
   const firstOptIndex = clean.indexOf(opts[0][0]);
   let question = clean.substring(0, firstOptIndex).trim();
+
+  // Clean up question prefix labels
   question = question
     .replace(/^\*{0,2}Sawal\*{0,2}[\:\s]*/i, "")
     .replace(/^\*{0,2}Question\*{0,2}[\:\s]*/i, "")
     .replace(/\*\*/g, "")
     .trim();
+
   if (!question) return null;
+
   return {
     question,
     options: opts.map(o => ({ key: o[1], text: o[2].trim() })),
@@ -610,55 +570,19 @@ function showMCQ(mcq) {
   const box = document.getElementById("messages");
   const last = box.lastElementChild;
   if (last) last.remove();
-
   const id = "mcq_" + Date.now();
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-
-  // Timer elements
-  const timerText = document.createElement("div");
-  timerText.className = "timer-text";
-  timerText.id = `${id}_timer`;
-  timerText.textContent = "⏱ 60 saniyay";
-
-  const timerBar = document.createElement("div");
-  timerBar.className = "timer-bar";
-  const timerFill = document.createElement("div");
-  timerFill.className = "timer-fill";
-  timerFill.id = `${id}_fill`;
-  timerFill.style.width = "100%";
-  timerBar.appendChild(timerFill);
-
-  // Question text (safe innerHTML from formatText which only adds controlled tags)
-  const qDiv = document.createElement("div");
-  qDiv.innerHTML = "<strong>Sawal:</strong><br><br>" + formatText(mcq.question);
-
-  // Options — built safely with DOM, no inline onclick
-  const optContainer = document.createElement("div");
-  optContainer.className = "mcq-options";
-  mcq.options.forEach(o => {
-    const btn = document.createElement("button");
-    btn.className = "mcq-opt";
-    btn.id = `${id}_${o.key}`;
-    btn.textContent = `${o.key}) ${o.text}`; // safe textContent
-    btn.dataset.key = o.key;
-    btn.dataset.mcqId = id;
-    btn.addEventListener("click", () => answerMCQ(o.key, id));
-    optContainer.appendChild(btn);
-  });
-
-  bubble.appendChild(timerText);
-  bubble.appendChild(timerBar);
-  bubble.appendChild(qDiv);
-  bubble.appendChild(optContainer);
-
+  const optHtml = mcq.options.map(o =>
+    `<button class="mcq-opt" id="${id}_${o.key}" onclick="answerMCQ('${o.key}','${id}')">${o.key}) ${o.text}</button>`
+  ).join("");
+  const html = `
+    <div class="timer-text" id="${id}_timer">⏱ 60 saniyay</div>
+    <div class="timer-bar"><div class="timer-fill" id="${id}_fill" style="width:100%"></div></div>
+    <strong>Sawal:</strong><br><br>${mcq.question.replace(/\n/g,"<br>")}<br><br>
+    <div class="mcq-options">${optHtml}</div>`;
   const div = document.createElement("div");
   div.className = "msg bot";
-  div.innerHTML = `<div class="avatar bot">🩺</div>`;
-  div.appendChild(bubble);
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-
+  div.innerHTML = `<div class="avatar bot">🩺</div><div class="bubble">${html}</div>`;
+  box.appendChild(div); box.scrollTop = box.scrollHeight;
   if (window.MathJax) MathJax.typesetPromise();
   currentMCQ._id = id;
 }
@@ -670,16 +594,12 @@ function startTimer() {
     const id = currentMCQ?._id;
     if (!id) { clearInterval(mcqTimer); return; }
     const timerEl = document.getElementById(`${id}_timer`);
-    const fillEl  = document.getElementById(`${id}_fill`);
+    const fillEl = document.getElementById(`${id}_fill`);
     if (timerEl) timerEl.textContent = `⏱ ${mcqTimeLeft} saniyay`;
-    if (fillEl) {
-      fillEl.style.width      = (mcqTimeLeft / 60 * 100) + "%";
-      fillEl.style.background = mcqTimeLeft <= 10 ? "#dc2626" : "#16a34a";
-    }
+    if (fillEl) { fillEl.style.width = (mcqTimeLeft/60*100)+"%"; fillEl.style.background = mcqTimeLeft<=10?"#dc2626":"#16a34a"; }
     if (mcqTimeLeft <= 0) {
       clearInterval(mcqTimer); disableMCQOpts(id);
-      addUserMessage("⏰ Time khatam!");
-      getExplanation("Time khatam — jawab nahi diya", id);
+      addUserMessage("⏰ Time khatam!"); getExplanation("Time khatam — jawab nahi diya", id);
       recordTime(60);
     }
   }, 1000);
@@ -689,45 +609,37 @@ function answerMCQ(key, id) {
   clearInterval(mcqTimer); disableMCQOpts(id);
   const timeTaken = 60 - mcqTimeLeft;
   recordTime(timeTaken);
-  addUserMessage(`Jawab: ${key}`);
-  getExplanation(key, id);
+  addUserMessage(`Jawab: ${key}`); getExplanation(key, id);
 }
 
 function recordTime(t) {
   mcqTimes.push(t);
-  const avg = Math.round(mcqTimes.reduce((a, b) => a + b, 0) / mcqTimes.length);
+  const avg = Math.round(mcqTimes.reduce((a,b)=>a+b,0)/mcqTimes.length);
   const el = document.getElementById("avg-display");
   el.style.display = "block";
-  el.textContent   = `⏱ Avg: ${avg}s`;
+  el.textContent = `⏱ Avg: ${avg}s`;
 }
 
 function disableMCQOpts(id) {
-  ["A", "B", "C", "D"].forEach(k => {
+  ["A","B","C","D"].forEach(k => {
     const b = document.getElementById(`${id}_${k}`);
-    if (b) b.disabled = true;
+    if (b) { b.disabled = true; }
   });
 }
 
 function getExplanation(answer, id) {
   addBotMessage('<div class="typing"><span></span><span></span><span></span></div>', true);
-  fetchStream(
-    { mode: "mcq_answer", message: answer, previousQuestion: currentMCQ?.raw || "", subject: currentSubject, language: currentLang, year: currentYear },
-    () => {}
-  );
+  fetchStream({ mode: "mcq_answer", message: answer, previousQuestion: currentMCQ?.raw || "", subject: currentSubject, language: currentLang, year: currentYear }, () => {});
   currentMCQ = null;
 }
 
 // ─── MESSAGING ────────────────────────────────────────────────────────────────
-function escapeHtml(str) {
-  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-}
-
 function addUserMessage(text) {
   document.querySelector(".empty-state")?.remove();
   const box = document.getElementById("messages");
   const div = document.createElement("div");
   div.className = "msg user";
-  div.innerHTML = `<div class="avatar user">👤</div><div class="bubble">${escapeHtml(text)}</div>`;
+  div.innerHTML = `<div class="avatar user">👤</div><div class="bubble">${text}</div>`;
   box.appendChild(div); box.scrollTop = box.scrollHeight;
 }
 
@@ -755,88 +667,51 @@ function sendMessage() {
   });
 }
 
-function handleKey(e)    { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
-function autoResize(el)  { el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 120) + "px"; }
+function handleKey(e) { if (e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendMessage(); } }
+function autoResize(el) { el.style.height="auto"; el.style.height=Math.min(el.scrollHeight,120)+"px"; }
 
 function stopResponse() {
   if (abortController) abortController.abort();
   setGenerating(false);
   const t = document.getElementById("typing-msg");
-  if (t) { t.querySelector(".bubble").innerHTML += "<br><em style='color:#6b7280;font-size:0.8rem'>Response rok di gayi.</em>"; t.id = ""; }
+  if (t) { t.querySelector(".bubble").innerHTML += "<br><em style='color:#6b7280;font-size:0.8rem'>Response rok di gayi.</em>"; t.id=""; }
 }
 
 function setGenerating(val) {
   isGenerating = val;
-  const sendBtn = document.getElementById("send-btn");
-  const stopBtn = document.getElementById("stop-btn");
-  if (val) {
-    sendBtn.style.setProperty("display", "none", "important");
-    stopBtn.style.setProperty("display", "inline-flex", "important");
-  } else {
-    sendBtn.style.setProperty("display", "inline-flex", "important");
-    stopBtn.style.setProperty("display", "none", "important");
-  }
+  document.getElementById("send-btn").style.display = val ? "none" : "block";
+  document.getElementById("stop-btn").style.display = val ? "block" : "none";
 }
 
-// ─── FETCH STREAM (SSE) ───────────────────────────────────────────────────────
 async function fetchStream(payload, onDone) {
   setGenerating(true);
   abortController = new AbortController();
-  let fullText = "";
   try {
     const res = await fetch("/chat", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-session-token": currentUser?.token || ""
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       signal: abortController.signal
     });
-
-    if (res.status === 401) {
-      // Session expired — send back to login
-      await doLogout();
-      return;
-    }
-
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
+    const data = await res.json();
+    const fullText = data.reply || "";
     const typingMsg = document.getElementById("typing-msg");
-    const bubble    = typingMsg?.querySelector(".bubble");
-    if (bubble) bubble.innerHTML = "";
-
-    outer: while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value);
-      for (const line of chunk.split("\n")) {
-        if (line.startsWith("data: ")) {
-          const data = line.slice(6);
-          if (data === "[DONE]") break outer; // ← FIX: exits both loops
-          try {
-            const { text } = JSON.parse(data);
-            fullText += text;
-            if (bubble) {
-              bubble.innerHTML = formatText(fullText);
-              document.getElementById("messages").scrollTop = 99999;
-            }
-          } catch { /* incomplete JSON chunk, skip */ }
-        }
-      }
-    }
-
+    const bubble = typingMsg?.querySelector(".bubble");
+    if (bubble) bubble.innerHTML = formatText(fullText);
     if (typingMsg) typingMsg.id = "";
     if (window.MathJax) MathJax.typesetPromise();
     onDone(formatText(fullText));
   } catch (err) {
-    if (err.name !== "AbortError") console.error(err);
+    if (err.name !== "AbortError") {
+      console.error(err);
+      const typingMsg = document.getElementById("typing-msg");
+      if (typingMsg) { typingMsg.querySelector(".bubble").innerHTML = "Thodi der baad try karo 🙏"; typingMsg.id = ""; }
+    }
   } finally {
     setGenerating(false);
   }
 }
 
-// ─── FORMAT TEXT ──────────────────────────────────────────────────────────────
 function formatText(text) {
   return text
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
