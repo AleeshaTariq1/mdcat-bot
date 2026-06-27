@@ -283,7 +283,7 @@
         <button class="subject-btn" onclick="setSubject('Physics',this)">⚛️ Physics</button>
         <button class="subject-btn" onclick="setSubject('English',this)">📝 English</button>
         <button class="subject-btn" onclick="setSubject('Logical Reasoning',this)">🧠 Logical</button>
-        <button class="lang-toggle" onclick="toggleLang()">🌐 Roman Urdu</button>
+        <button class="lang-toggle" onclick="toggleLang()" id="lang-toggle-btn">🌐 English</button>
       </div>
       <div class="year-bar">
         <span style="font-size:0.75rem;color:var(--text-light);font-weight:600;white-space:nowrap">Past Paper:</span>
@@ -325,7 +325,7 @@
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let currentUser = null;
 let currentSubject = "All";
-let currentLang = "roman_urdu";
+let currentLang = "english";
 let currentYear = "any";
 let isGenerating = false;
 let abortController = null;
@@ -497,8 +497,9 @@ function setYear(y, btn) {
   btn.classList.add("active");
 }
 function toggleLang() {
-  currentLang = currentLang === "roman_urdu" ? "english" : "roman_urdu";
-  document.querySelector(".lang-toggle").textContent = currentLang === "english" ? "🌐 English" : "🌐 Roman Urdu";
+  currentLang = currentLang === "english" ? "roman_urdu" : "english";
+  const btn = document.getElementById("lang-toggle-btn") || document.querySelector(".lang-toggle");
+  if (btn) btn.textContent = currentLang === "english" ? "🌐 English" : "🌐 Roman Urdu";
 }
 
 // ─── SPECIAL ACTIONS ──────────────────────────────────────────────────────────

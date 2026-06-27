@@ -13,93 +13,94 @@ app.post("/chat", async (req, res) => {
     const userMessage = req.body.message;
     const subject = req.body.subject || "All";
     const mode = req.body.mode || "chat";
-    const language = req.body.language || "roman_urdu";
+    const language = req.body.language || "english";
     const year = req.body.year || "any";
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    const languageInstruction = language === "english"
-      ? "Answer in clear, simple English."
-      : "Roman Urdu mein jawab do — simple aur clear.";
+    const languageInstruction = language === "roman_urdu"
+      ? "Roman Urdu mein jawab do (Urdu words ko Roman script mein likho) — simple aur clear. Scientific/technical terms English mein rakho."
+      : "Answer in clear, simple English. Keep all scientific and technical terms in English.";
 
-    let subjectInstruction = "Biology, Chemistry, Physics, English, aur Logical Reasoning";
-    if (subject === "Biology")           subjectInstruction = "sirf Biology";
-    if (subject === "Chemistry")         subjectInstruction = "sirf Chemistry";
-    if (subject === "Physics")           subjectInstruction = "sirf Physics";
-    if (subject === "English")           subjectInstruction = "sirf English";
-    if (subject === "Logical Reasoning") subjectInstruction = "sirf Logical Reasoning";
+    let subjectInstruction = "Biology, Chemistry, Physics, English, and Logical Reasoning";
+    if (subject === "Biology")           subjectInstruction = "Biology only";
+    if (subject === "Chemistry")         subjectInstruction = "Chemistry only";
+    if (subject === "Physics")           subjectInstruction = "Physics only";
+    if (subject === "English")           subjectInstruction = "English only";
+    if (subject === "Logical Reasoning") subjectInstruction = "Logical Reasoning only";
 
     const yearInstruction = year !== "any"
-      ? `Question MDCAT ${year} past paper style mein banana.`
-      : "MDCAT style question banana.";
+      ? `Create the question in MDCAT ${year} past paper style.`
+      : "Create an MDCAT style question.";
 
     let prompt;
 
     if (mode === "mcq") {
-      prompt = `
-Tu ek MDCAT preparation assistant hai Pakistan ke medical students ke liye.
-Ek MDCAT-style MCQ banao — ${subjectInstruction} se.
+      prompt = `You are an MDCAT preparation assistant for Pakistani medical students.
+Create ONE MDCAT-style MCQ from: ${subjectInstruction}.
 ${yearInstruction}
 
-Format bilkul yeh follow karo:
+STRICTLY follow this exact format — no extra text before or after:
 
-Sawal: [question yahan]
+Question: [write the question here]
 
-A) [option]
-B) [option]
-C) [option]
-D) [option]
+A) [option A]
+B) [option B]
+C) [option C]
+D) [option D]
 
-Sirf sawal aur options do — jawab mat batao abhi.
-${languageInstruction} (scientific/technical terms English mein rakho).
-      `;
+IMPORTANT RULES:
+- Only provide the question and exactly 4 options (A, B, C, D)
+- Do NOT reveal the answer
+- Do NOT add any explanation
+- Do NOT add option E or any other option
+- ${languageInstruction}`;
+
     } else if (mode === "mcq_answer") {
-      prompt = `
-Tu ek MDCAT preparation assistant hai.
-Yeh tha sawal: ${req.body.previousQuestion}
-Student ka jawab: ${userMessage}
+      prompt = `You are an MDCAT preparation assistant.
+The question was: ${req.body.previousQuestion}
+Student's answer: ${userMessage}
 
-Batao ke jawab sahi hai ya ghalat.
-Phir:
-1. Sahi answer explain karo
-2. Ghalat options kyun ghalat hain — ek line mein har ek ke liye
-3. Agar Biology hai — koi diagram ya labeled structure text mein describe karo agar helpful ho
-${languageInstruction}
-      `;
+Tell if the answer is correct or wrong.
+Then:
+1. Explain the correct answer (A, B, C, or D only)
+2. Briefly explain why each wrong option is incorrect
+3. If Biology — describe any relevant diagram or structure in text if helpful
+
+${languageInstruction}`;
+
     } else if (mode === "diagram") {
-      prompt = `
-Tu ek MDCAT Biology expert hai.
-Student ne diagram/structure maanga hai: ${userMessage}
+      prompt = `You are an MDCAT Biology expert.
+The student wants a diagram/structure for: ${userMessage}
 
-Text mein ek clear labeled diagram banao using ASCII art ya structured list.
-Phir har part ki function bhi explain karo.
-${languageInstruction}
+Create a clear labeled diagram using a structured list.
+Then explain the function of each part.
 
 Format:
 [Structure Name]
 - Part 1: function
 - Part 2: function
 - Part 3: function
-      `;
+
+${languageInstruction}`;
+
     } else if (mode === "weightage") {
-      prompt = `
-Tu ek MDCAT expert hai.
-${subjectInstruction} ka MDCAT mein topic-wise weightage batao.
-Table format mein likho:
+      prompt = `You are an MDCAT expert.
+Show topic-wise weightage for: ${subjectInstruction} in MDCAT.
+
+Format as a table:
 Topic | Approximate % | Important Subtopics
 
-Phir top 3 most important topics highlight karo.
-${languageInstruction}
-      `;
+Then highlight the top 3 most important topics.
+${languageInstruction}`;
+
     } else {
-      prompt = `
-Tu ek MDCAT preparation assistant hai Pakistan ke medical students ke liye.
-Sirf MDCAT related sawaalon ka jawab do — ${subjectInstruction}.
+      prompt = `You are an MDCAT preparation assistant for Pakistani medical students.
+Only answer MDCAT-related questions about: ${subjectInstruction}.
 ${languageInstruction}
-Agar Biology question hai aur diagram helpful hoga, text mein simple labeled structure bhi do.
-Agar student past papers ke baare mein pooche, Practice MCQ mode suggest karo.
-Student ka sawal: ${userMessage}
-      `;
+If a Biology question benefits from a diagram, provide a simple labeled text structure.
+If the student asks about past papers, suggest using MCQ Practice mode.
+Student's question: ${userMessage}`;
     }
 
     const result = await model.generateContent(prompt);
@@ -108,11 +109,11 @@ Student ka sawal: ${userMessage}
 
   } catch (error) {
     console.error("Error:", error.message);
-    res.status(500).json({ reply: "Thodi der baad try karo — server busy hai! 🙏" });
+    res.status(500).json({ reply: "Server busy — please try again in a moment! 🙏" });
   }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`MDCAT Bot chal raha hai — port ${PORT} pe!`);
+  console.log(`MDCAT Bot running on port ${PORT}`);
 });
