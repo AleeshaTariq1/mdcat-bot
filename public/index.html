@@ -507,7 +507,7 @@ function askDiagram() {
   const topic = prompt("Konsa structure ya diagram chahiye? (e.g. Heart, Mitochondria, Nephron)");
   if (!topic) return;
   addUserMessage(`🔬 Diagram: ${topic}`);
-  addBotMessage('<div class="typing"><span></span><span></span><span></span></div>', true);
+  addTypingMsg();
   const userText = `Diagram: ${topic}`;
   fetchStream({ mode: "diagram", message: topic, subject: currentSubject, language: currentLang, year: currentYear }, (html) => {
     addToHistory(userText, html);
@@ -516,7 +516,7 @@ function askDiagram() {
 
 function askWeightage() {
   addUserMessage(`📊 ${currentSubject === "All" ? "MDCAT" : currentSubject} topic weightage`);
-  addBotMessage('<div class="typing"><span></span><span></span><span></span></div>', true);
+  addTypingMsg();
   const userText = `Topic weightage: ${currentSubject}`;
   fetchStream({ mode: "weightage", message: "weightage", subject: currentSubject, language: currentLang, year: currentYear }, (html) => {
     addToHistory(userText, html);
@@ -526,7 +526,7 @@ function askWeightage() {
 // ─── MCQ ─────────────────────────────────────────────────────────────────────
 function startMCQ() {
   if (isGenerating) return;
-  addBotMessage('<div class="typing"><span></span><span></span><span></span></div>', true);
+  addTypingMsg();
   const mcqStart = Date.now();
   fetchStream({ mode: "mcq", subject: currentSubject, language: currentLang, year: currentYear, message: "Generate MCQ" }, (html) => {
     const parsed = parseMCQ(html);
@@ -661,7 +661,7 @@ function sendMessage() {
   if (!text || isGenerating) return;
   inp.value = ""; inp.style.height = "auto";
   addUserMessage(text);
-  addBotMessage('<div class="typing"><span></span><span></span><span></span></div>', true);
+  addTypingMsg();
   const userText = text;
   fetchStream({ mode: "chat", message: text, subject: currentSubject, language: currentLang, year: currentYear }, (finalHtml) => {
     addToHistory(userText, finalHtml);
@@ -682,6 +682,17 @@ function setGenerating(val) {
   isGenerating = val;
   document.getElementById("send-btn").style.display = val ? "none" : "block";
   document.getElementById("stop-btn").style.display = val ? "block" : "none";
+}
+
+function addTypingMsg() {
+  document.querySelector(".empty-state")?.remove();
+  const box = document.getElementById("messages");
+  const existing = document.getElementById("typing-msg");
+  if (existing) existing.remove();
+  const div = document.createElement("div");
+  div.className = "msg bot"; div.id = "typing-msg";
+  div.innerHTML = `<div class="avatar bot">🩺</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  box.appendChild(div); box.scrollTop = box.scrollHeight;
 }
 
 async function fetchStream(payload, onDone) {
